@@ -1,12 +1,12 @@
-const Nft = require("../models/Nft");
-const User = require("../models/User");
-const { StatusCodes } = require("http-status-codes");
-const { BadRequest, UnauthenticatedError } = require("../errors");
+const Nft = require('../models/Nft');
+const User = require('../models/User');
+const { StatusCodes } = require('http-status-codes');
+const { BadRequest, UnauthenticatedError } = require('../errors');
 
 const getAllNfts = async (req, res) => {
   const nfts = await Nft.find({});
   if (nfts.length === 0) {
-    throw new BadRequest("There are no NFTs yet");
+    throw new BadRequest('There are no NFTs yet');
   }
   res.status(StatusCodes.OK).json(nfts);
 };
@@ -16,7 +16,7 @@ const getNft = async (req, res) => {
   const nft = await Nft.findById(id);
 
   if (!nft) {
-    throw new BadRequest("NFT not found!");
+    throw new BadRequest('NFT not found!');
   }
 
   // API ready NFT.
@@ -40,7 +40,7 @@ const getAllUsers = async (req, res) => {
     return { _id, username, nfts, following, followers, recommended };
   });
   if (apiUsers.length === 0) {
-    throw new BadRequest("There are no users yet");
+    throw new BadRequest('There are no users yet');
   }
   res.status(StatusCodes.OK).json(apiUsers);
 };
@@ -49,7 +49,7 @@ const getUser = async (req, res) => {
   const { username } = req.params;
   const dbUser = await User.findOne({ username });
   if (!dbUser) {
-    throw new BadRequest("User not found!");
+    throw new BadRequest('User not found!');
   }
   const { firstname, lastname, following, followers } = dbUser;
 

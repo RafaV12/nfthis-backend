@@ -6,22 +6,23 @@ const bcrypt = require('bcrypt');
 
 const register = async (req, res) => {
   const { username, password } = req.body;
+  const userExist = await User.findOne({ username: username.toLowerCase() });
+  if (!userExist) {
+    const saltRounds = 10;
+    const passwordHash = await bcrypt.hash(password, saltRounds);
 
-  const saltRounds = 10;
-  const passwordHash = await bcrypt.hash(password, saltRounds);
+    const newUser = {
+      username: username.toLowerCase(),
+      passwordHash,
+    };
+    const user = await User.create(newUser);
 
-  const newUser = {
-    username: username.toLowerCase(),
-    passwordHash,
-  };
-  const user = await User.create(newUser);
+    const userId = user._id;
 
-  const userId = user._id;
-
-  const token = user.createJWT();
-  res
-    .status(StatusCodes.CREATED)
-    .json({ user: { username: user.username }, token, userId });
+    const token = user.createJWT();
+    return res.status(StatusCodes.CREATED).json({ user: { username: user.username }, token, userId });
+  }
+  throw new BadRequest('Username already exists');
 };
 
 const login = async (req, res) => {
@@ -63,7 +64,7 @@ const profile = async (req, res) => {
   const { userId } = req.user;
 
   const user = await User.findById(userId);
-  const nfts = await Nft.find({ user: userId });
+  const nfts = await Nft.find({ owner: userId });
 
   const loggedUser = {
     firstname: user.firstname,
@@ -143,15 +144,10 @@ const settings = async (req, res) => {
       }
     );
     // Update the username once the other changes are done
-    await User.updateOne(
-      { username: userToChange.username },
-      { username: newUsername.toLowerCase() }
-    );
+    await User.updateOne({ username: userToChange.username }, { username: newUsername.toLowerCase() });
   }
 
-  res
-    .status(StatusCodes.OK)
-    .json({ newUsername, msg: 'Username updated successfully' });
+  res.status(StatusCodes.OK).json({ newUsername, msg: 'Username updated successfully' });
 };
 
 const followOrUnfollowUser = async (req, res) => {
@@ -170,16 +166,10 @@ const followOrUnfollowUser = async (req, res) => {
     }
 
     // Update 'following' array of the logged user to include the followed user
-    await User.updateOne(
-      { username: loggedUserId },
-      { following: [...loggedUser.following, userToFollowId] }
-    );
+    await User.updateOne({ username: loggedUserId }, { following: [...loggedUser.following, userToFollowId] });
 
     // Update 'followers' array of the followed user to include the logged user
-    await User.updateOne(
-      { username: userToFollowId },
-      { followers: [...userToFollow.followers, loggedUserId] }
-    );
+    await User.updateOne({ username: userToFollowId }, { followers: [...userToFollow.followers, loggedUserId] });
     return res.status(StatusCodes.OK).json({ msg: 'Followed successfully' });
   }
 
@@ -200,9 +190,7 @@ const followOrUnfollowUser = async (req, res) => {
     );
 
     // Filter 'followers' array of the unfollowed user to remove the logged user
-    let filteredFollowers = userToUnfollow.followers.filter(
-      (id) => id !== loggedUserId
-    );
+    let filteredFollowers = userToUnfollow.followers.filter((id) => id !== loggedUserId);
     await User.updateOne(
       { username: userToUnfollowId },
       {
